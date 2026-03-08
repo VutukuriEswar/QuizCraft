@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@500;700;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+    :root {
+        --background: 15 23 42;
+        /* Slate 900 */
+        --foreground: 248 250 252;
+        --card: 30 41 59;
+        /* Slate 800 */
+        --card-foreground: 248 250 252;
+        --popover: 30 41 59;
+        --popover-foreground: 248 250 252;
+        --primary: 139 92 246;
+        /* Violet 500 */
+        --primary-foreground: 255 255 255;
+        --secondary: 51 65 85;
+        /* Slate 700 */
+        --secondary-foreground: 248 250 252;
+        --muted: 51 65 85;
+        --muted-foreground: 148 163 184;
+        --accent: 34 211 238;
+        /* Cyan 400 */
+        --accent-foreground: 15 23 42;
+        --destructive: 239 68 68;
+        --destructive-foreground: 255 255 255;
+        --border: 51 65 85;
+        --input: 51 65 85;
+        --ring: 139 92 246;
+        --radius: 0.75rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+@layer utilities {
+    .glass {
+        @apply bg-slate-800/50 backdrop-blur-xl border border-slate-700/50 shadow-sm;
+    }
+
+    .text-gradient {
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-cyan-400;
+    }
+
+    .bg-grid {
+        background-image:
+            linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        background-size: 40px 40px;
+    }
+}
