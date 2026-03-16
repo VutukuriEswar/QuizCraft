@@ -62,7 +62,8 @@ venv\Scripts\activate  # On Linux: source venv/bin/activate
 
 3. **Install backend dependencies**
 ```bash
-pip install flask flask-cors pymongo nltk python-docx python-pptx PyPDF2
+cd backend
+pip install -r requirements.txt
 ```
 *(Note: NLTK data will download automatically on first run)*
 
@@ -110,7 +111,7 @@ yarn start
 
 This project is licensed under the **MIT License** — see the [LICENSE](./LICENSE) file for details.
 
-© 2024 QuizCraft Team
+© 2026 Eswar Vutukuri, Vutla Yasaswi Venkat
 
 ## Acknowledgments
 
