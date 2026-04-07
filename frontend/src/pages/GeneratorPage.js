@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { generateQuiz } from '@/utils/api';
@@ -9,9 +9,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-    ArrowLeft, Upload, Plus, Trash2, Sparkles, Loader2,
+    ArrowLeft, ArrowRight, Upload, Plus, Trash2, Sparkles, Loader2,
     CheckCircle, HelpCircle, Download, Copy, FileText,
-    X, Eye, EyeOff, BookOpen, GraduationCap, Check, Printer
+    X, Eye, EyeOff, BookOpen, GraduationCap, Check, Printer,
+    XCircle, Trophy, Play, List
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -362,7 +363,6 @@ const QuestionCard = ({ question, index, showAnswers }) => {
                                     </div>
                                 </div>
                             )}
-
                         </div>
                     )}
                 </CardContent>
@@ -392,6 +392,264 @@ const SkeletonCard = ({ index }) => (
     </motion.div>
 );
 
+const AttemptOverlay = ({ questions, currentQIndex, setCurrentQIndex, userAnswers, setUserAnswers, onSubmit, onExit }) => {
+    const q = questions[currentQIndex];
+    const isLast = currentQIndex === questions.length - 1;
+    const isFirst = currentQIndex === 0;
+    const progress = ((currentQIndex + 1) / questions.length) * 100;
+
+    const handleSelect = (option) => {
+        if (q.type === 'msq') {
+            setUserAnswers(prev => {
+                const current = prev[currentQIndex] || [];
+                if (current.includes(option)) {
+                    return { ...prev, [currentQIndex]: current.filter(o => o !== option) };
+                }
+                return { ...prev, [currentQIndex]: [...current, option] };
+            });
+        } else {
+            setUserAnswers(prev => ({ ...prev, [currentQIndex]: option }));
+        }
+    };
+
+    const isSelected = (option) => {
+        if (q.type === 'msq') {
+            return (userAnswers[currentQIndex] || []).includes(option);
+        }
+        return userAnswers[currentQIndex] === option;
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950 flex flex-col"
+        >
+            <div className="h-1 bg-slate-800">
+                <motion.div
+                    className="h-full bg-gradient-to-r from-violet-500 to-cyan-500"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 0.3 }}
+                />
+            </div>
+
+            <div className="flex items-center justify-between px-6 py-4">
+                <div className="flex items-center gap-3">
+                    <span className="text-sm text-slate-400">Question {currentQIndex + 1} of {questions.length}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold text-white bg-gradient-to-r ${TYPE_COLORS[q.type]}`}>
+                        {TYPE_LABELS[q.type]}
+                    </span>
+                    <span className="text-xs text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded-lg font-medium">
+                        {q.marks} {q.marks === 1 ? 'mark' : 'marks'}
+                    </span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={onExit} className="text-slate-500 hover:text-white">
+                    <X className="w-5 h-5" />
+                </Button>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center px-6 py-4 overflow-y-auto">
+                <div className="w-full max-w-2xl">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={currentQIndex}
+                            initial={{ opacity: 0, x: 40 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -40 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <p className="text-xl font-semibold text-white mb-8 leading-relaxed whitespace-pre-line">{q.question_text}</p>
+
+                            {q.type === 'true_false' ? (
+                                <div className="grid grid-cols-2 gap-4">
+                                    {['True', 'False'].map(opt => (
+                                        <button
+                                            key={opt}
+                                            onClick={() => handleSelect(opt)}
+                                            className={`p-6 rounded-xl border-2 text-lg font-bold transition-all duration-200
+                                                ${isSelected(opt)
+                                                    ? 'border-violet-500 bg-violet-500/20 text-violet-300 shadow-lg shadow-violet-500/10'
+                                                    : 'border-slate-700 bg-slate-900/50 text-slate-400 hover:border-slate-600 hover:text-slate-300'
+                                                }`}
+                                        >
+                                            {opt}
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {q.options.map((opt, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleSelect(opt)}
+                                            className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 text-left transition-all duration-200
+                                                ${isSelected(opt)
+                                                    ? 'border-violet-500 bg-violet-500/10 text-white shadow-lg shadow-violet-500/10'
+                                                    : 'border-slate-700 bg-slate-900/30 text-slate-300 hover:border-slate-600'
+                                                }`}
+                                        >
+                                            <span className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-bold flex-shrink-0
+                                                ${isSelected(opt)
+                                                    ? 'border-violet-500 bg-violet-500 text-white'
+                                                    : 'border-slate-600 text-slate-500'
+                                                }`}>
+                                                {q.type === 'msq'
+                                                    ? (isSelected(opt) ? <Check className="w-4 h-4" /> : OPTION_LETTERS[i])
+                                                    : OPTION_LETTERS[i]
+                                                }
+                                            </span>
+                                            <span className="leading-relaxed">{opt}</span>
+                                        </button>
+                                    ))}
+                                    {q.type === 'msq' && (
+                                        <p className="text-xs text-slate-500 mt-2">Select all that apply</p>
+                                    )}
+                                </div>
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+            </div>
+
+            <div className="flex items-center justify-between px-6 py-5 border-t border-slate-800">
+                <Button
+                    variant="outline"
+                    onClick={() => setCurrentQIndex(i => i - 1)}
+                    disabled={isFirst}
+                    className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                >
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Previous
+                </Button>
+
+                {isLast ? (
+                    <Button
+                        onClick={onSubmit}
+                        className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white px-8"
+                    >
+                        <CheckCircle className="w-4 h-4 mr-2" /> Submit Quiz
+                    </Button>
+                ) : (
+                    <Button
+                        onClick={() => setCurrentQIndex(i => i + 1)}
+                        className="bg-violet-600 hover:bg-violet-500 text-white"
+                    >
+                        Next <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                )}
+            </div>
+        </motion.div>
+    );
+};
+
+const ResultsOverlay = ({ questions, userAnswers, totalMarks, onReview, onRetake }) => {
+    const results = useMemo(() => {
+        let earned = 0;
+        const breakdown = questions.map((q, i) => {
+            const userAns = userAnswers[i];
+            let isCorrect = false;
+            if (q.type === 'mcq' || q.type === 'true_false') {
+                isCorrect = userAns === q.answer;
+            } else if (q.type === 'msq') {
+                const userSorted = (userAns || []).slice().sort();
+                const correctSorted = (Array.isArray(q.answer) ? q.answer : []).slice().sort();
+                isCorrect = userSorted.length === correctSorted.length && userSorted.every((v, j) => v === correctSorted[j]);
+            }
+            if (isCorrect) earned += q.marks;
+            return { question: q, userAnswer: userAns, isCorrect, index: i };
+        });
+        const percentage = totalMarks > 0 ? Math.round((earned / totalMarks) * 100) : 0;
+        return { earned, total: totalMarks, breakdown, percentage };
+    }, [questions, userAnswers, totalMarks]);
+
+    const correctCount = results.breakdown.filter(b => b.isCorrect).length;
+    const scoreColor = results.percentage >= 70 ? 'text-emerald-400' : results.percentage >= 40 ? 'text-amber-400' : 'text-red-400';
+    const scoreBorder = results.percentage >= 70 ? 'border-emerald-500/50' : results.percentage >= 40 ? 'border-amber-500/50' : 'border-red-500/50';
+    const scoreBg = results.percentage >= 70 ? 'from-emerald-500/20 to-cyan-500/20' : results.percentage >= 40 ? 'from-amber-500/20 to-orange-500/20' : 'from-red-500/20 to-pink-500/20';
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-slate-950 overflow-y-auto"
+        >
+            <div className="max-w-2xl mx-auto px-6 py-12">
+                <div className="text-center mb-10">
+                    <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full bg-gradient-to-br ${scoreBg} border-2 ${scoreBorder} mb-4`}>
+                        <Trophy className="w-10 h-10 text-amber-400" />
+                    </div>
+                    <h2 className="text-3xl font-bold text-white mb-2">Quiz Complete!</h2>
+                    <div className="flex items-center justify-center gap-6 mt-6">
+                        <div>
+                            <p className={`text-4xl font-bold ${scoreColor}`}>{results.earned}</p>
+                            <p className="text-sm text-slate-400">out of {results.total} marks</p>
+                        </div>
+                        <div className="w-px h-12 bg-slate-700" />
+                        <div>
+                            <p className="text-4xl font-bold text-cyan-400">{correctCount}</p>
+                            <p className="text-sm text-slate-400">out of {questions.length} correct</p>
+                        </div>
+                        <div className="w-px h-12 bg-slate-700" />
+                        <div>
+                            <p className={`text-4xl font-bold ${scoreColor}`}>{results.percentage}%</p>
+                            <p className="text-sm text-slate-400">score</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-3 mb-10">
+                    {results.breakdown.map((b) => (
+                        <div key={b.index} className={`p-4 rounded-xl border ${b.isCorrect ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-red-500/30 bg-red-500/5'}`}>
+                            <div className="flex items-start gap-3">
+                                {b.isCorrect
+                                    ? <CheckCircle className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                    : <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                                }
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-white font-medium line-clamp-2">
+                                        Q{b.index + 1}. {b.question.question_text}
+                                    </p>
+                                    {!b.isCorrect && (
+                                        <div className="mt-2 space-y-1">
+                                            <p className="text-xs text-red-400">
+                                                Your answer: {b.userAnswer ? (Array.isArray(b.userAnswer) ? b.userAnswer.join(', ') : b.userAnswer) : 'Not answered'}
+                                            </p>
+                                            <p className="text-xs text-emerald-400">
+                                                Correct answer: {Array.isArray(b.question.answer) ? b.question.answer.join(', ') : b.question.answer}
+                                            </p>
+                                        </div>
+                                    )}
+                                    <span className={`text-xs mt-1 block ${b.isCorrect ? 'text-emerald-500' : 'text-red-500'}`}>
+                                        {b.isCorrect ? `+${b.question.marks}` : '0'} / {b.question.marks} marks
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={onRetake}
+                        className="flex-1 border-slate-700 text-slate-300 hover:bg-slate-800 h-12"
+                    >
+                        <Play className="w-4 h-4 mr-2" /> Retake Quiz
+                    </Button>
+                    <Button
+                        onClick={onReview}
+                        className="flex-1 bg-gradient-to-r from-violet-600 to-cyan-600 text-white h-12"
+                    >
+                        <List className="w-4 h-4 mr-2" /> Review Questions
+                    </Button>
+                </div>
+            </div>
+        </motion.div>
+    );
+};
+
 const GeneratorPage = () => {
     const navigate = useNavigate();
     const fileInputRef = useRef(null);
@@ -407,6 +665,9 @@ const GeneratorPage = () => {
         { count: 5, marks: 1, type: 'mcq' },
         { count: 3, marks: 2, type: 'msq' },
     ]);
+    const [quizPhase, setQuizPhase] = useState('idle');
+    const [currentQIndex, setCurrentQIndex] = useState(0);
+    const [userAnswers, setUserAnswers] = useState({});
 
     const handleFileChange = useCallback((selectedFile) => {
         if (!selectedFile) return;
@@ -438,6 +699,16 @@ const GeneratorPage = () => {
         setConfigBlocks(nb);
     };
 
+    const startAttempt = () => {
+        setUserAnswers({});
+        setCurrentQIndex(0);
+        setQuizPhase('attempt');
+    };
+
+    const handleSubmitQuiz = () => {
+        setQuizPhase('results');
+    };
+
     const handleGenerate = async () => {
         if (!text && !file) {
             toast.error('Please provide text or upload a file.');
@@ -450,6 +721,7 @@ const GeneratorPage = () => {
 
         setLoading(true);
         setResult(null);
+        setQuizPhase('idle');
 
         const formData = new FormData();
         if (file) formData.append('file', file);
@@ -463,11 +735,13 @@ const GeneratorPage = () => {
                 toast.error('No questions could be generated. Try adding more content.');
             } else {
                 setResult(data);
+                setQuizPhase('idle');
                 toast.success(`✅ ${data.questions.length} questions generated!`);
             }
         } catch (err) {
             const msg = err.response?.data?.error || 'Generation failed. Check your content and try again.';
             toast.error(msg);
+            setQuizPhase('idle');
         } finally {
             setLoading(false);
         }
@@ -484,6 +758,32 @@ const GeneratorPage = () => {
                         questions={result.questions}
                         meta={quizMeta}
                         onClose={() => setShowExportModal(false)}
+                    />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {quizPhase === 'attempt' && result && (
+                    <AttemptOverlay
+                        questions={result.questions}
+                        currentQIndex={currentQIndex}
+                        setCurrentQIndex={setCurrentQIndex}
+                        userAnswers={userAnswers}
+                        setUserAnswers={setUserAnswers}
+                        onSubmit={handleSubmitQuiz}
+                        onExit={() => setQuizPhase('idle')}
+                    />
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {quizPhase === 'results' && result && (
+                    <ResultsOverlay
+                        questions={result.questions}
+                        userAnswers={userAnswers}
+                        totalMarks={totalMarks}
+                        onReview={() => setQuizPhase('review')}
+                        onRetake={startAttempt}
                     />
                 )}
             </AnimatePresence>
@@ -718,56 +1018,92 @@ const GeneratorPage = () => {
                                 ))}
                             </div>
                         ) : result ? (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                <div className="flex items-center justify-between mb-5">
-                                    <div>
-                                        <h3 className="text-xl font-bold font-outfit text-white">
-                                            {result.questions.length} Questions Generated
-                                        </h3>
-                                        <p className="text-sm text-slate-400">
-                                            {totalMarks} marks total
-                                            {quizMeta.subject && ` · ${quizMeta.subject}`}
-                                        </p>
+                            quizPhase === 'idle' ? (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="h-full flex flex-col items-center justify-center text-center border border-dashed border-slate-700 rounded-2xl p-12 min-h-64 bg-slate-800/20"
+                                >
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500/20 to-cyan-500/20 flex items-center justify-center mb-6 border border-slate-700">
+                                        <GraduationCap className="w-8 h-8 text-violet-400" />
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <h3 className="text-2xl font-bold font-outfit text-white mb-2">
+                                        {result.questions.length} Questions Ready!
+                                    </h3>
+                                    <p className="text-slate-400 mb-8 max-w-sm">
+                                        {totalMarks} marks total
+                                        {quizMeta.subject && ` · ${quizMeta.subject}`}.<br />
+                                        Choose how you want to proceed.
+                                    </p>
+                                    <div className="flex gap-4 w-full max-w-md">
                                         <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="border-slate-600 text-slate-300 hover:bg-slate-700 gap-1.5"
-                                            onClick={() => setShowAnswers(v => !v)}
+                                            onClick={startAttempt}
+                                            className="flex-1 h-14 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:opacity-90 text-white text-base rounded-xl shadow-lg shadow-emerald-500/20"
                                         >
-                                            {showAnswers
-                                                ? <><EyeOff className="w-4 h-4" /> Hide Answers</>
-                                                : <><Eye className="w-4 h-4" /> Show Answers</>
-                                            }
+                                            <Play className="w-5 h-5 mr-2" /> Attempt Quiz
+                                        </Button>
+                                        <Button
+                                            onClick={() => setQuizPhase('review')}
+                                            className="flex-1 h-14 bg-gradient-to-r from-violet-600 to-purple-600 hover:opacity-90 text-white text-base rounded-xl shadow-lg shadow-violet-500/20"
+                                        >
+                                            <Eye className="w-5 h-5 mr-2" /> Review Questions
                                         </Button>
                                     </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {result.questions.map((q, i) => (
-                                        <QuestionCard
-                                            key={i}
-                                            question={q}
-                                            index={i}
-                                            showAnswers={showAnswers}
-                                        />
-                                    ))}
-                                </div>
-
-                                <div className="mt-6 p-4 bg-slate-800/50 rounded-xl border border-slate-700 flex items-center justify-between">
-                                    <div>
-                                        <p className="text-sm font-medium text-white">Ready to use!</p>
-                                        <p className="text-xs text-slate-400">Export with or without answers</p>
+                                </motion.div>
+                            ) : quizPhase === 'review' ? (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                                    <div className="flex items-center justify-between mb-5">
+                                        <div>
+                                            <h3 className="text-xl font-bold font-outfit text-white">
+                                                {result.questions.length} Questions Generated
+                                            </h3>
+                                            <p className="text-sm text-slate-400">
+                                                {totalMarks} marks total
+                                                {quizMeta.subject && ` · ${quizMeta.subject}`}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="border-slate-600 text-slate-300 hover:bg-slate-700 gap-1.5"
+                                                onClick={() => setQuizPhase('idle')}
+                                            >
+                                                <ArrowLeft className="w-4 h-4" /> Options
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                className="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white gap-1.5"
+                                                onClick={startAttempt}
+                                            >
+                                                <Play className="w-4 h-4" /> Attempt
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="border-slate-600 text-slate-300 hover:bg-slate-700 gap-1.5"
+                                                onClick={() => setShowAnswers(v => !v)}
+                                            >
+                                                {showAnswers
+                                                    ? <><EyeOff className="w-4 h-4" /> Hide</>
+                                                    : <><Eye className="w-4 h-4" /> Show</>
+                                                }
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <Button
-                                        className="bg-gradient-to-r from-violet-600 to-cyan-600 text-white"
-                                        onClick={() => setShowExportModal(true)}
-                                    >
-                                        <Download className="w-4 h-4 mr-1.5" /> Export
-                                    </Button>
-                                </div>
-                            </motion.div>
+
+                                    <div className="space-y-4">
+                                        {result.questions.map((q, i) => (
+                                            <QuestionCard
+                                                key={i}
+                                                question={q}
+                                                index={i}
+                                                showAnswers={showAnswers}
+                                            />
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            ) : null
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-center border border-dashed border-slate-700 rounded-2xl p-12 min-h-64">
                                 <Sparkles className="w-12 h-12 text-violet-400/30 mb-4" />

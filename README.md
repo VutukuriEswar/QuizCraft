@@ -1,38 +1,43 @@
 ## What is QuizCraft?
 
-QuizCraft is an intelligent NLP-powered web application that transforms static study material into dynamic assessments. It automates the tedious task of question creation by extracting text from various document formats, analyzing linguistic structures, and generating quizzes with smart distractors. Designed for educators and students, it turns lecture notes into study guides in seconds.
+QuizCraft is an intelligent, hybrid NLP and AI-powered web application designed to bridge the gap between teaching and learning. Whether you are a professor struggling to create high-quality assessments or a student trying to identify and strengthen your weak topics, QuizCraft transforms static study material into dynamic, interactive quizzes in seconds. It automates the tedious task of question creation while providing a self-paced environment for deep self-evaluation.
 
 ## Key Features
+
+📝 **For Educators: Effortless Assessment Creation**
+- **Instant Test Papers:** Paste your lecture notes or upload a textbook chapter, and instantly generate a balanced, marks-weighted question paper.
+- **Multiple Formats:** Export cleanly formatted quizzes with a single click—copy as text for LMS integration or print directly to PDF for in-class exams.
+- **Answer Keys Made Easy:** Choose to export with or without answers, making it seamless to distribute tests to students while keeping the grading key secure.
+- **Customizable Configurations:** Define exactly how many Single Choice, Multiple Choice, or True/False questions you need, and assign custom marks to each section.
+
+🎓 **For Students: Smart Self-Assessment & Gap Analysis**
+- **Interactive Practice Mode:** Take generated quizzes in a distraction-free, fullscreen environment that simulates a real exam.
+- **Identify Weak Areas:** Questions are engineered to test deep understanding rather than rote memorization, helping you instantly pinpoint concepts you haven't fully grasped.
+- **Instant Feedback & Explanations:** View detailed results immediately after submission, including your score, correct answers, and explanations for why your answer was wrong.
+- **Review & Retake:** Easily toggle between hiding and showing answers while reviewing, and retake quizzes as many times as needed until you master the material.
 
 📄 **Multi-Format Document Parsing**
 - **File Support:** Extracts text from PDFs, Word Documents (`.docx`), PowerPoint Presentations (`.pptx`), and plain text files.
 - **Raw Text Input:** Users can simply paste text content directly into the interface for quick generation.
 
-🧠 **NLP-Driven Question Generation**
-- **Structural Analysis:** Uses NLTK Part-of-Speech (POS) tagging to identify subjects, verbs, and definitions within sentences.
-- **Smart Patterns:** Detects definition patterns ("X is Y") to generate "What is...?" questions and uses fill-in-the-blank logic for factual statements.
-- **Sentence Filtering:** Automatically filters out sentences that are too short or too long to ensure question quality.
+🧠 **Dual-Engine Question Generation**
+- **AI-Powered Engine:** Uses advanced AI to generate highly contextual, conceptual, and reasoning-based questions with plausible distractors.
+- **NLP Fallback Engine:** If AI is unavailable, seamlessly falls back to a robust local NLP engine using NLTK for POS tagging and smart pattern matching.
+- **Zero-Hallucination Safeguards:** Strict prompting ensures the system only asks about concepts explicitly mentioned in the provided text—no surprises.
 
-🎯 **Intelligent Distractor Engine**
-- **WordNet Integration:** Utilizes NLTK WordNet to generate semantically relevant distractors (wrong answers) for MCQs.
-- **Semantic Relations:** Pulls distractors from synsets, hypernyms, and hyponyms to ensure options look plausible but are distinct.
-- **Fallback Logic:** Ensures valid question structures even if semantic data is unavailable.
-
-⚡ **Customizable Configuration**
-- **Dynamic Sections:** Define exactly how many questions you want, the marks per question, and the type (MCQ, MSQ, Theoretical).
-- **Weighted Quizzes:** Create balanced tests by mixing high-mark theoretical questions with low-mark objective questions.
-
-💾 **Module Management**
-- **Study Hub:** Save course content as "Modules" in the database for future use.
-- **Persistent Storage:** MongoDB backend stores generated quizzes, user modules, and results.
+📦 **Advanced Export System**
+- **Clipboard Copy:** Instantly copy the entire quiz as formatted text.
+- **Print / PDF:** Open a cleanly formatted print view to save directly as a PDF.
+- **Flexible Options:** Export with correct answers (for answer keys) or without answers (for actual test papers).
 
 ## Tech Stack
 
 **Backend:**
 - Flask (Python web framework)
 - NLTK (Natural Language Toolkit for tokenization, POS tagging, and WordNet)
+- PyMuPDF, python-docx, python-pptx for file parsing
+- Requests & OpenRouter API for AI capabilities
 - PyMongo for database interactions
-- PyPDF2, python-docx, python-pptx for file parsing
 
 **Frontend:**
 - React for UI components
@@ -49,6 +54,7 @@ QuizCraft is an intelligent NLP-powered web application that transforms static s
 - Python 3.8+
 - Node.js & npm/yarn
 - MongoDB (local or cloud)
+- OpenRouter API Key (Optional, for AI features. App works fully offline with NLP fallback).
 
 ### Installation Steps
 
@@ -69,10 +75,11 @@ pip install -r requirements.txt
 
 4. **Configure Environment**
 Ensure your MongoDB instance is running. Update the `Config` class in your Python code with your `MONGO_URI`.
+*(Optional)* To enable AI question generation, set the `OPENROUTER_API_KEY` environment variable.
 
 5. **Run backend server**
 ```bash
-python app.py
+python server.py
 ```
 *(Runs on port 8000 by default)*
 
@@ -92,20 +99,9 @@ yarn start
 - GET /api/modules - Fetch saved study modules.
 - POST /api/modules - Save a new module (ID, Name, Content).
 
-**Results:**
-- POST /api/results - Save quiz results (implied endpoint).
-
-## NLP Logic Details
-
-**Question Formulation:**
-- **Definition Detection:** Splits sentences on keywords like "is", "are", "refers" to create "What is [Subject]?" questions.
-- **Action Detection:** Identifies Subject-Verb-Object relationships to frame questions about actions.
-- **Blank Generation:** Identifies nouns in sentences to create fill-in-the-blank style questions.
-
-**Distractor Generation:**
-- Retrieves the Part-of-Speech tag for the correct answer.
-- Queries WordNet for words sharing the same meaning (synonyms) or category (hypernyms/hyponyms).
-- Randomizes and presents the top 3 semantic relatives as alternative options.
+**Quizzes:**
+- GET /api/quizzes - Fetch all saved quizzes (metadata only).
+- POST /api/save-quiz - Save a generated quiz to the database.
 
 ## License
 
@@ -115,4 +111,4 @@ This project is licensed under the **MIT License** — see the [LICENSE](./LICEN
 
 ## Acknowledgments
 
-Thanks to the NLTK team for providing robust natural language processing tools, the WordNet creators for the lexical database, and the Flask/React communities for the excellent frameworks that made this project possible.
+Thanks to the NLTK team for providing robust natural language processing tools, the WordNet creators for the lexical database, the Flask/React communities for the excellent frameworks, and OpenRouter for making powerful LLMs accessible for educational tools.

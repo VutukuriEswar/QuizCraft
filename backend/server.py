@@ -7,7 +7,7 @@ from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from pymongo import MongoClient
 from bson.objectid import ObjectId
-from services import QuizGenerator, FileProcessor
+from services import QuizGenerator, FileProcessor, _TESSERACT_AVAILABLE, _PYMUPDF_AVAILABLE, _PIL_AVAILABLE
 
 logging.basicConfig(level=logging.INFO)
 
@@ -93,20 +93,13 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
 def normalize_question_type(q_type):
     q_type = str(q_type).lower().strip()
     mapping = {
-        "single choice": "mcq",
-        "single_choice": "mcq",
-        "multi choice": "msq",
-        "multi_choice": "msq",
-        "multiple choice": "mcq",
-        "multiple_choice": "mcq",
-        "true false": "true_false",
-        "true/false": "true_false",
-        "true_false": "true_false",
-        "theoretical": "theoretical",
-        "short answer": "theoretical",
-        "short_answer": "theoretical",
-        "mcq": "mcq",
-        "msq": "msq",
+        "single choice": "mcq", "single_choice": "mcq",
+        "multi choice": "msq", "multi_choice": "msq",
+        "multiple choice": "mcq", "multiple_choice": "mcq",
+        "true false": "true_false", "true/false": "true_false",
+        "true_false": "true_false", "theoretical": "theoretical",
+        "short answer": "theoretical", "short_answer": "theoretical",
+        "mcq": "mcq", "msq": "msq",
     }
     return mapping.get(q_type, "mcq")
 
@@ -117,8 +110,7 @@ def index():
 @app.route('/api/modules', methods=['GET'])
 def get_modules():
     model = ModuleModel()
-    modules = model.get_all_modules()
-    return jsonify({"status": "success", "data": {"modules": modules}})
+    return jsonify({"status": "success", "data": {"modules": model.get_all_modules()}})
 
 @app.route('/api/modules', methods=['POST'])
 def add_module():
@@ -134,7 +126,6 @@ def add_module():
 @app.route('/api/generate-quiz', methods=['POST'])
 def generate_quiz():
     text_content = ""
-
     if 'file' in request.files:
         file = request.files['file']
         if file.filename != '':
@@ -142,15 +133,12 @@ def generate_quiz():
             if error:
                 return jsonify({"error": error}), 400
             text_content = text or ""
-
     if 'text' in request.form:
         extra = request.form['text'].strip()
         if extra:
             text_content = (text_content + " " + extra).strip()
-
     if not text_content.strip():
         return jsonify({"error": "No content provided. Please paste text or upload a file."}), 400
-
     try:
         config_data = request.form.get('config', '[]')
         config_blocks = json.loads(config_data)
@@ -162,17 +150,14 @@ def generate_quiz():
             block['marks'] = max(1, int(block.get('marks', 1)))
     except Exception as e:
         return jsonify({"error": f"Invalid configuration: {str(e)}"}), 400
-
     if not config_blocks:
         config_blocks = [{"type": "mcq", "count": 5, "marks": 1}]
-
     try:
         generator = QuizGenerator()
         questions = generator.generate_from_text(text_content, config_blocks)
     except Exception as e:
         logging.error(f"Generation error: {e}", exc_info=True)
         return jsonify({"error": f"Quiz generation failed: {str(e)}"}), 500
-
     return jsonify({"questions": questions, "total": len(questions)})
 
 @app.route('/api/save-quiz', methods=['POST'])
@@ -189,8 +174,7 @@ def save_quiz():
 @app.route('/api/quizzes', methods=['GET'])
 def get_quizzes():
     model = QuizModel()
-    quizzes = model.get_all_quizzes()
-    return jsonify({"status": "success", "data": quizzes})
+    return jsonify({"status": "success", "data": model.get_all_quizzes()})
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000)
