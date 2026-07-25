@@ -111,4 +111,6 @@ This project is licensed under the **MIT License** — see the [LICENSE](./LICEN
 
 ## Acknowledgments
 
+This project was developed under the guidance of **Prof. Gundimeda Venugopal**, **VIT-AP University**. We sincerely thank our professor for their invaluable guidance, mentorship, and continuous support throughout the development of this project.
+
 Thanks to the NLTK team for providing robust natural language processing tools, the WordNet creators for the lexical database, the Flask/React communities for the excellent frameworks, and OpenRouter for making powerful LLMs accessible for educational tools.
